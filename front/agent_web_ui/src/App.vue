@@ -6,8 +6,27 @@
           <img src="/its-logo.svg" alt="ITS" class="brand-logo" />
           <div>
             <p class="eyebrow">ITS Assistant</p>
-            <h1>Log in to continue</h1>
+            <h1>{{ authMode === 'login' ? 'Log in to continue' : 'Create your account' }}</h1>
           </div>
+        </div>
+
+        <div class="auth-switch">
+          <button
+            class="auth-switch-button"
+            :class="{ active: authMode === 'login' }"
+            :disabled="isAuthenticating"
+            @click="switchAuthMode('login')"
+          >
+            Log in
+          </button>
+          <button
+            class="auth-switch-button"
+            :class="{ active: authMode === 'register' }"
+            :disabled="isAuthenticating"
+            @click="switchAuthMode('register')"
+          >
+            Register
+          </button>
         </div>
 
         <div class="login-fields">
@@ -17,8 +36,21 @@
               id="username"
               v-model="username"
               type="text"
-              placeholder="root1 / root2 / root3"
-              @keyup.enter="handleLogin"
+              placeholder="Enter your username"
+              :disabled="isAuthenticating"
+              @keyup.enter="handleAuthSubmit"
+            />
+          </label>
+
+          <label v-if="authMode === 'register'" class="field">
+            <span>Email</span>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              placeholder="Enter your email"
+              :disabled="isAuthenticating"
+              @keyup.enter="handleAuthSubmit"
             />
           </label>
 
@@ -28,19 +60,38 @@
               id="password"
               v-model="password"
               type="password"
-              placeholder="123456"
-              @keyup.enter="handleLogin"
+              placeholder="Enter your password"
+              :disabled="isAuthenticating"
+              @keyup.enter="handleAuthSubmit"
             />
           </label>
         </div>
 
         <p v-if="loginError" class="login-error">{{ loginError }}</p>
+        <p v-if="authSuccessMessage" class="login-success">{{ authSuccessMessage }}</p>
 
-        <button class="primary-button login-submit" @click="handleLogin">Continue</button>
+        <button
+          class="primary-button login-submit"
+          :disabled="isAuthenticating"
+          @click="handleAuthSubmit"
+        >
+          {{ isAuthenticating ? 'Please wait...' : authMode === 'login' ? 'Continue' : 'Create account' }}
+        </button>
 
         <div class="login-hint">
-          <span>Test accounts: root1, root2, root3</span>
-          <span>Password: 123456</span>
+          <span v-if="authMode === 'login'">Use an existing account to access your chat history.</span>
+          <span v-else>Registration succeeds immediately if the username is not already taken.</span>
+        </div>
+
+        <div class="login-footer">
+          <span>{{ authMode === 'login' ? 'Need an account?' : 'Already have an account?' }}</span>
+          <button
+            class="footer-link"
+            :disabled="isAuthenticating"
+            @click="switchAuthMode(authMode === 'login' ? 'register' : 'login')"
+          >
+            {{ authMode === 'login' ? 'Register now' : 'Log in instead' }}
+          </button>
         </div>
       </div>
     </div>
@@ -134,7 +185,7 @@
 
             <div v-if="showUserInfo" class="account-menu">
               <span class="account-menu-user">{{ currentUser }}</span>
-              <button class="menu-action" @click="handleLogout">Log out</button>
+              <button class="menu-action" @click="goToLogin">Log out</button>
             </div>
           </div>
         </header>
@@ -218,6 +269,12 @@ marked.setOptions({
   gfm: true
 });
 
+const API_BASE_URL = 'http://127.0.0.1:8000';
+const ACCESS_TOKEN_KEY = 'itsAccessToken';
+const REFRESH_TOKEN_KEY = 'itsRefreshToken';
+const CURRENT_USER_KEY = 'itsCurrentUser';
+const CURRENT_USER_ID_KEY = 'itsCurrentUserId';
+
 const renderMarkdown = (text) => {
   if (!text) return '';
   try {
@@ -228,24 +285,51 @@ const renderMarkdown = (text) => {
   }
 };
 
-const VALID_USERS = [
-  { username: 'root1', password: '123456', userId: 'root1' },
-  { username: 'root2', password: '123456', userId: 'root2' },
-  { username: 'root3', password: '123456', userId: 'root3' }
-];
+const decodeBase64Url = (value) => {
+  if (!value) return '';
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  return atob(padded);
+};
+
+const parseJwtPayload = (token) => {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    return JSON.parse(decodeBase64Url(parts[1]));
+  } catch (error) {
+    console.error('Failed to parse token payload:', error);
+    return null;
+  }
+};
+
+const clearAuthStorage = () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(CURRENT_USER_KEY);
+  localStorage.removeItem(CURRENT_USER_ID_KEY);
+};
 
 export default {
   name: 'App',
   setup() {
-    const savedUserId = localStorage.getItem('currentUserId');
-    const savedUser = VALID_USERS.find((item) => item.userId === savedUserId);
+    const savedAccessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const savedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    const savedUsername = localStorage.getItem(CURRENT_USER_KEY) || '';
+    const savedUserId = localStorage.getItem(CURRENT_USER_ID_KEY) || '';
 
-    const isLoggedIn = ref(Boolean(savedUser));
+    const isLoggedIn = ref(Boolean(savedAccessToken && savedRefreshToken && savedUsername));
     const isSidebarExpanded = ref(true);
+    const authMode = ref('login');
     const username = ref('');
+    const email = ref('');
     const password = ref('');
-    const currentUser = ref(savedUser ? savedUser.username : '');
+    const currentUser = ref(savedUsername);
+    const currentUserId = ref(savedUserId);
     const loginError = ref('');
+    const authSuccessMessage = ref('');
+    const isAuthenticating = ref(false);
     const showUserInfo = ref(false);
     const avatarContainerRef = ref(null);
     const textareaRef = ref(null);
@@ -265,6 +349,89 @@ export default {
     let reader = null;
 
     const currentUserInitial = computed(() => (currentUser.value || 'U').slice(0, 1).toUpperCase());
+
+    const getAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY);
+    const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
+
+    const persistAuth = ({ accessToken, refreshToken, username: nextUsername }) => {
+      const payload = parseJwtPayload(accessToken);
+      const nextUserId = payload?.sub ? String(payload.sub) : '';
+
+      localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      localStorage.setItem(CURRENT_USER_KEY, nextUsername);
+      if (nextUserId) {
+        localStorage.setItem(CURRENT_USER_ID_KEY, nextUserId);
+      } else {
+        localStorage.removeItem(CURRENT_USER_ID_KEY);
+      }
+
+      currentUser.value = nextUsername;
+      currentUserId.value = nextUserId;
+      isLoggedIn.value = true;
+    };
+
+    const clearAuthState = () => {
+      clearAuthStorage();
+      isLoggedIn.value = false;
+      currentUser.value = '';
+      currentUserId.value = '';
+      showUserInfo.value = false;
+    };
+
+    const buildAuthHeaders = (headers = {}) => {
+      const accessToken = getAccessToken();
+      return {
+        ...headers,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+      };
+    };
+
+    const refreshAccessToken = async () => {
+      const refreshToken = getRefreshToken();
+      const persistedUsername = localStorage.getItem(CURRENT_USER_KEY) || currentUser.value;
+      if (!refreshToken || !persistedUsername) {
+        clearAuthState();
+        throw new Error('Session expired');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+
+      if (!response.ok) {
+        clearAuthState();
+        throw new Error('Session expired');
+      }
+
+      const data = await response.json();
+      persistAuth({
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        username: persistedUsername
+      });
+
+      return data.access_token;
+    };
+
+    const authFetch = async (path, options = {}, retry = true) => {
+      const headers = buildAuthHeaders(options.headers);
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers
+      });
+
+      if (response.status === 401 && retry && getRefreshToken()) {
+        await refreshAccessToken();
+        return authFetch(path, options, false);
+      }
+
+      return response;
+    };
 
     const currentViewTitle = computed(() => {
       if (selectedNavItem.value === 'knowledge') return 'Knowledge Base';
@@ -327,21 +494,86 @@ export default {
       showSessions.value = !showSessions.value;
     };
 
-    const handleLogin = () => {
+    const switchAuthMode = (mode) => {
+      authMode.value = mode;
       loginError.value = '';
-      const user = VALID_USERS.find(
-        (item) => item.username === username.value && item.password === password.value
-      );
+      authSuccessMessage.value = '';
+      username.value = '';
+      email.value = '';
+      password.value = '';
+    };
 
-      if (!user) {
-        loginError.value = 'Incorrect username or password';
+    const handleAuthSubmit = async () => {
+      loginError.value = '';
+      authSuccessMessage.value = '';
+
+      const trimmedUsername = username.value.trim();
+      const trimmedEmail = email.value.trim();
+      const trimmedPassword = password.value;
+
+      if (!trimmedUsername) {
+        loginError.value = 'Username is required';
         return;
       }
 
-      isLoggedIn.value = true;
-      currentUser.value = user.username;
-      localStorage.setItem('currentUserId', user.userId);
+      if (authMode.value === 'register' && !trimmedEmail) {
+        loginError.value = 'Email is required';
+        return;
+      }
+
+      if (!trimmedPassword) {
+        loginError.value = 'Password is required';
+        return;
+      }
+
+      isAuthenticating.value = true;
+
+      try {
+        const endpoint = authMode.value === 'login' ? '/api/auth/login' : '/api/auth/register';
+        const payload =
+          authMode.value === 'login'
+            ? { username: trimmedUsername, password: trimmedPassword }
+            : {
+                username: trimmedUsername,
+                email: trimmedEmail,
+                password: trimmedPassword
+              };
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Authentication failed');
+        }
+
+        persistAuth({
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+          username: trimmedUsername
+        });
+
+        authSuccessMessage.value =
+          authMode.value === 'register' ? 'Account created successfully.' : '';
+        if (authMode.value === 'register') {
+          authMode.value = 'login';
+        }
+
+        fetchUserSessions();
+      } catch (error) {
+        loginError.value = error.message || 'Authentication failed';
+      } finally {
+        isAuthenticating.value = false;
+      }
+
       username.value = '';
+      email.value = '';
       password.value = '';
     };
 
@@ -350,15 +582,19 @@ export default {
 
       isLoadingSessions.value = true;
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/user_sessions', {
+        const response = await authFetch('/api/user_sessions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ user_id: currentUser.value })
+          body: JSON.stringify({ user_id: currentUserId.value || currentUser.value })
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            goToLogin();
+            return;
+          }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -430,18 +666,33 @@ export default {
     };
 
     const handleLogout = () => {
-      isLoggedIn.value = false;
-      currentUser.value = '';
-      localStorage.removeItem('currentUserId');
+      clearAuthState();
       userInput.value = '';
       sessions.value = [];
       selectedSessionId.value = '';
       selectedNavItem.value = '';
       resetConversationState();
-      showUserInfo.value = false;
     };
 
-    const goToLogin = () => {
+    const logoutFromServer = async () => {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) return;
+
+      try {
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+      } catch (error) {
+        console.error('Logout request failed:', error);
+      }
+    };
+
+    const goToLogin = async () => {
+      await logoutFromServer();
       handleLogout();
     };
 
@@ -497,8 +748,8 @@ export default {
       }
       if (!userInput.value.trim()) return;
 
-      const userId = localStorage.getItem('currentUserId');
-      if (!userId) {
+      const accessToken = getAccessToken();
+      if (!accessToken || !currentUser.value) {
         isLoggedIn.value = false;
         return;
       }
@@ -525,7 +776,7 @@ export default {
         answerText.value = userMessage;
       }
 
-      const finalUserId = userId || currentUser.value;
+      const finalUserId = currentUserId.value || currentUser.value;
       scrollToBottom();
 
       const requestData = {
@@ -537,7 +788,7 @@ export default {
       };
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/query', {
+        const response = await authFetch('/api/query', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -546,6 +797,10 @@ export default {
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            await goToLogin();
+            return;
+          }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -752,6 +1007,8 @@ export default {
 
     return {
       answerText,
+      authMode,
+      authSuccessMessage,
       avatarContainerRef,
       chatMessages,
       createNewSession,
@@ -763,13 +1020,14 @@ export default {
       getSessionPreview,
       goToLogin,
       handleCancel,
+      handleAuthSubmit,
       handleKnowledgeBase,
-      handleLogin,
       handleLogout,
       handleNetworkSearch,
       handleResponseData,
       handleSend,
       handleServiceStation,
+      isAuthenticating,
       isLoadingSessions,
       isLoggedIn,
       isProcessing,
@@ -777,6 +1035,7 @@ export default {
       loginError,
       messageCardClass,
       messageClass,
+      email,
       password,
       processContent,
       processMessages,
@@ -788,6 +1047,7 @@ export default {
       showSessions,
       showUserInfo,
       textareaRef,
+      switchAuthMode,
       toggleSessions,
       toggleSidebar,
       toggleThinking,
@@ -821,6 +1081,32 @@ export default {
   background: rgba(22, 24, 29, 0.86);
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(20px);
+}
+
+.auth-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.auth-switch-button {
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.auth-switch-button.active {
+  background: rgba(25, 195, 125, 0.14);
+  color: #baf3d0;
 }
 
 .login-brand {
@@ -896,6 +1182,12 @@ export default {
   font-size: 14px;
 }
 
+.login-success {
+  margin: 16px 0 0;
+  color: #95efbc;
+  font-size: 14px;
+}
+
 .login-submit {
   width: 100%;
   margin-top: 20px;
@@ -907,6 +1199,32 @@ export default {
   gap: 4px;
   color: var(--text-tertiary);
   font-size: 13px;
+}
+
+.login-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.footer-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #baf3d0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.footer-link:disabled,
+.auth-switch-button:disabled,
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .workspace {

@@ -1,6 +1,29 @@
-2026-04-22 21:10:41,875 | INFO     | ITS_App:56 | 接收到获取用户会话请求
-2026-04-22 21:10:41,896 | INFO     | ITS_App:60 | 获取用户 root1 的所有会话记忆数据
-2026-04-22 21:10:41,911 | DEBUG    | ITS_App:65 | 成功获取用户 root1 的 2 个会话
-2026-04-22 21:11:05,571 | INFO     | ITS_App:56 | 接收到获取用户会话请求
-2026-04-22 21:11:05,573 | INFO     | ITS_App:60 | 获取用户 root1 的所有会话记忆数据
-2026-04-22 21:11:05,581 | DEBUG    | ITS_App:65 | 成功获取用户 root1 的 2 个会话
+2026-04-26 12:27:29,805 | DEBUG    | ITS_App:31 | 成功加载提示词: comprehensive_service_agent
+2026-04-26 12:27:29,888 | DEBUG    | ITS_App:31 | 成功加载提示词: technical_agent
+2026-04-26 12:27:29,926 | DEBUG    | ITS_App:31 | 成功加载提示词: orchestrator_v1
+2026-04-26 12:27:30,260 | INFO     | ITS_App:16 | Application starting, connecting MCP clients...
+2026-04-26 12:27:31,062 | ERROR    | ITS_App:12 | 百度地图MCP连接失败: unhandled errors in a TaskGroup (1 sub-exception)
+2026-04-26 12:28:21,248 | DEBUG    | ITS_App:31 | 成功加载提示词: comprehensive_service_agent
+2026-04-26 12:28:21,260 | DEBUG    | ITS_App:31 | 成功加载提示词: technical_agent
+2026-04-26 12:28:21,267 | DEBUG    | ITS_App:31 | 成功加载提示词: orchestrator_v1
+2026-04-26 12:28:21,299 | INFO     | ITS_App:25 | Application starting with MCP disabled
+2026-04-26 12:32:19,584 | DEBUG    | ITS_App:31 | 成功加载提示词: comprehensive_service_agent
+2026-04-26 12:32:19,598 | DEBUG    | ITS_App:31 | 成功加载提示词: technical_agent
+2026-04-26 12:32:19,607 | DEBUG    | ITS_App:31 | 成功加载提示词: orchestrator_v1
+2026-04-26 12:32:19,621 | INFO     | ITS_App:25 | Application starting with MCP disabled
+2026-04-26 12:36:18,274 | DEBUG    | ITS_App:31 | 成功加载提示词: comprehensive_service_agent
+2026-04-26 12:36:18,332 | DEBUG    | ITS_App:31 | 成功加载提示词: technical_agent
+2026-04-26 12:36:18,364 | DEBUG    | ITS_App:31 | 成功加载提示词: orchestrator_v1
+2026-04-26 12:36:18,432 | INFO     | ITS_App:25 | Application starting with MCP disabled
+2026-04-26 12:38:00,914 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 12:38:00,915 | WARNING  | ITS_App:93 | 用户目录不存在: 1
+2026-04-26 12:38:00,917 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 12:38:00,922 | WARNING  | ITS_App:93 | 用户目录不存在: 1
+2026-04-26 12:38:22,990 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 12:38:22,991 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 12:38:22,992 | WARNING  | ITS_App:93 | 用户目录不存在: 1
+2026-04-26 12:38:22,993 | WARNING  | ITS_App:93 | 用户目录不存在: 1
+2026-04-26 12:40:00,470 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 12:40:00,471 | WARNING  | ITS_App:93 | 用户目录不存在: 1
+2026-04-26 12:40:00,473 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 12:40:00,475 | WARNING  | ITS_App:93 | 用户目录不存在: 1

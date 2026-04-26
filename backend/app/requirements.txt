@@ -5,5 +5,8 @@ pymysql
 DBUtils
 openai
 httpx
-openai-agents
+mcp
+langchain-core
+langchain-openai
+langgraph
 pystun3

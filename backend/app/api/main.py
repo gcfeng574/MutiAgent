@@ -1,66 +1,59 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+
+from api.auth_router import auth_router
 from api.routers import router
+from config.settings import settings
 from infrastructure.logging.logger import logger
-from infrastructure.tools.mcp.mcp_manager import mcp_connect, mcp_cleanup
+from infrastructure.tools.mcp.mcp_manager import mcp_cleanup, mcp_connect
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    FastAPI应用生命周期管理
+    """管理应用级 MCP 客户端的生命周期。"""
+    if settings.ENABLE_MCP:
+        logger.info("Application starting, connecting MCP clients...")
+        try:
+            await mcp_connect()
+            logger.info("MCP clients connected")
+        except Exception as exc:
+            logger.error("Failed to connect MCP clients: %s", exc)
+    else:
+        logger.info("Application starting with MCP disabled")
 
-    在应用启动时建立MCP连接，在应用关闭时清理连接。
-    确保资源正确初始化和释放。
-    """
-    # 应用启动时执行
-    logger.info("应用启动，建立MCP连接...")
-    try:
-        await mcp_connect()
-        logger.info("MCP连接建立完成")
-    except Exception as e:
-        logger.error(f"MCP连接建立失败: {str(e)}")
+    yield
 
-    yield  # 应用运行期间（先别释放mcp链接 去处理请求...）
-
-    # 应用关闭时执行
-    logger.info("应用关闭，清理MCP连接...")
-    try:
-        await mcp_cleanup()
-        logger.info("MCP连接清理完成")
-    except Exception as e:
-        logger.error(f"MCP连接清理失败: {str(e)}")
+    if settings.ENABLE_MCP:
+        logger.info("Application stopping, cleaning MCP clients...")
+        try:
+            await mcp_cleanup()
+            logger.info("MCP clients cleaned up")
+        except Exception as exc:
+            logger.error("Failed to clean MCP clients: %s", exc)
 
 
 def create_fast_api() -> FastAPI:
-    # 1. 创建FastApi实例,绑定了生命周期事件
+    """创建 FastAPI 应用，并注册中间件与路由。"""
     app = FastAPI(title="ITS API", lifespan=lifespan)
 
-    # 2. 处理跨域
     app.add_middleware(
         CORSMiddleware,
-        # CORSMiddleware 会自动拦截后端的响应 并贴上这些标签 Access-Control-Allow-Origin Access-Control-Allow-Methods Access-Control-Allow-Headers
-        allow_origins=["*"],  # 生产环境应限制为特定域名
-        allow_credentials=True,  # cookie(自定义的key value)(user_id)
-        allow_methods=["*"],  # 任意的请求都可以（POST）
-        allow_headers=["*"],  # 请求头中带上自己的信息（token）
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
-    # 3. 注册各种路由
+    app.include_router(router=auth_router)
     app.include_router(router=router)
-
-    # 4.返回创建的FastAPI
     return app
 
 
-if __name__ == '__main__':
-    print("1.准备启动Web服务器")
+if __name__ == "__main__":
     try:
         uvicorn.run(app=create_fast_api(), host="127.0.0.1", port=8000)
-
-        logger.info("2.启动Web服务器成功...")
-
-    except KeyboardInterrupt as e:
-        logger.error(f"2.启动Web服务器失败: {str(e)}")
+    except KeyboardInterrupt as exc:
+        logger.error("Server stopped: %s", exc)

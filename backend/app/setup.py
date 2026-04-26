@@ -11,9 +11,12 @@ setup(
         "pydantic",
         "pydantic-settings",
         "openai",
-        "openai-agents",
+        "mcp",
+        "langchain-core",
+        "langchain-openai",
+        "langgraph",
         "pymysql",
         "dbutils",
-        "pystun3"
+        "pystun3",
     ],
 )

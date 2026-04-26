@@ -1,38 +1,56 @@
-from agents import OpenAIChatCompletionsModel
-from openai import AsyncOpenAI
+from langchain_openai import ChatOpenAI
+
 from config.settings import settings
 
-# 硅基流动配置(主模型)
-SF_API_KEY = settings.SF_API_KEY
-SF_BASE_URL = settings.SF_BASE_URL
-MAIN_MODEL_NAME = settings.MAIN_MODEL_NAME
 
-# 阿里百炼配置(子模型)
-AL_BAILIAN_API_KEY = settings.AL_BAILIAN_API_KEY
-AL_BAILIAN_BASE_URL = settings.AL_BAILIAN_BASE_URL
-SUB_MODEL_NAME = settings.SUB_MODEL_NAME
+def _resolve_provider(
+    preferred_base_url: str | None,
+    preferred_api_key: str | None,
+    fallback_base_url: str | None,
+    fallback_api_key: str | None,
+) -> tuple[str, str]:
+    if preferred_base_url and preferred_api_key:
+        return preferred_base_url, preferred_api_key
+    if fallback_base_url and fallback_api_key:
+        return fallback_base_url, fallback_api_key
+    raise ValueError("No usable LLM provider configuration found.")
 
-# 创建模型客户端
-# 主模型客户端(协调Agent使用)
-main_model_client = AsyncOpenAI(
-    base_url=SF_BASE_URL, # 硅基流动base url
-    api_key=SF_API_KEY  # 硅基流动api key
+
+def _build_chat_model(
+    model_name: str | None,
+    preferred_base_url: str | None,
+    preferred_api_key: str | None,
+    fallback_base_url: str | None,
+    fallback_api_key: str | None,
+    temperature: float = 0,
+) -> ChatOpenAI:
+    base_url, api_key = _resolve_provider(
+        preferred_base_url=preferred_base_url,
+        preferred_api_key=preferred_api_key,
+        fallback_base_url=fallback_base_url,
+        fallback_api_key=fallback_api_key,
+    )
+
+    return ChatOpenAI(
+        model=model_name or "",
+        base_url=base_url,
+        api_key=api_key,
+        temperature=temperature,
+    )
+
+
+main_model = _build_chat_model(
+    model_name=settings.MAIN_MODEL_NAME,
+    preferred_base_url=settings.SF_BASE_URL,
+    preferred_api_key=settings.SF_API_KEY,
+    fallback_base_url=settings.AL_BAILIAN_BASE_URL,
+    fallback_api_key=settings.AL_BAILIAN_API_KEY,
 )
-# 子模型客户端(干活的子Agent使用)
-sub_model_client = AsyncOpenAI(
-    base_url=AL_BAILIAN_BASE_URL, # 阿里百炼base url
-    api_key=AL_BAILIAN_API_KEY # 阿里百炼api key
+
+sub_model = _build_chat_model(
+    model_name=settings.SUB_MODEL_NAME or settings.MAIN_MODEL_NAME,
+    preferred_base_url=settings.AL_BAILIAN_BASE_URL,
+    preferred_api_key=settings.AL_BAILIAN_API_KEY,
+    fallback_base_url=settings.SF_BASE_URL,
+    fallback_api_key=settings.SF_API_KEY,
 )
-
-
-
-
-# 创建主调度模型
-main_model = OpenAIChatCompletionsModel(
-    model=MAIN_MODEL_NAME,
-    openai_client=main_model_client)
-
-# 创建子调度模型
-sub_model = OpenAIChatCompletionsModel(
-    model=SUB_MODEL_NAME,
-    openai_client=sub_model_client)
