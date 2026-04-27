@@ -127,7 +127,9 @@ class IngestionProcessor:
         for line in page_content.splitlines():
             stripped = line.strip()
             if stripped.startswith("# "):
-                return stripped[2:].strip()
+                candidate = stripped[2:].strip()
+                if candidate and not MarkDownUtils.is_generic_title(candidate):
+                    return candidate
         return MarkDownUtils.extract_title(md_path)
 
     def _merge_small_sections(self, sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

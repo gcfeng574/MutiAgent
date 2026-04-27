@@ -98,7 +98,18 @@ class VectorStoreRepository:
         Returns:
             List[List[float]]: embedding 向量列表。
         """
-        return self.embedding.embed_documents(texts)
+        if not texts:
+            return []
+
+        # DashScope 兼容 embedding 接口单次 batch size 不能大于 10。
+        # 统一在仓储层做分批，避免调用方在标题精排、chunk 精排、最终 rerank
+        # 等多个阶段分别处理这一兼容细节。
+        embeddings: List[List[float]] = []
+        batch_size = max(1, int(settings.EMBEDDING_BATCH_SIZE))
+        for start in range(0, len(texts), batch_size):
+            batch = texts[start : start + batch_size]
+            embeddings.extend(self.embedding.embed_documents(batch))
+        return embeddings
 
     def search_similarity_with_score(self, user_question: str, top_k: int = 5) -> List[tuple[Document, float]]:
         """

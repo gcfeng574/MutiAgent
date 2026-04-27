@@ -36,6 +36,13 @@ class QueryResponse(BaseModel):
     sources: List[SourceItem] = Field(default_factory=list)
 
 
+class RetrieveResponse(BaseModel):
+    """纯检索响应，不依赖聊天模型。"""
+
+    question: str
+    sources: List[SourceItem] = Field(default_factory=list)
+
+
 class QueryRequest(BaseModel):
     """查询请求。"""
 

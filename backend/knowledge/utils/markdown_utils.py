@@ -6,6 +6,12 @@ from typing import Any, Dict, List
 class MarkDownUtils:
     """Markdown 文档相关工具。"""
 
+    _GENERIC_TITLE_PATTERNS = [
+        re.compile(r"^知识库\s*\d+$", re.IGNORECASE),
+        re.compile(r"^文档\s*\d+$", re.IGNORECASE),
+        re.compile(r"^article\s*\d+$", re.IGNORECASE),
+    ]
+
     @staticmethod
     def collect_md_metadata(folder_path: str) -> List[Dict[str, Any]]:
         """扫描目录并收集 Markdown 文件的路径与标题。"""
@@ -36,6 +42,21 @@ class MarkDownUtils:
         if match:
             return match.group(2).strip()
         return os.path.splitext(filename)[0].strip()
+
+    @staticmethod
+    def is_generic_title(title: str) -> bool:
+        """
+        判断标题是否只是抓取阶段生成的泛化占位标题。
+
+        这类标题对检索几乎没有帮助，例如：
+        - 知识库 1001
+        - 文档 35
+        一旦命中这类标题，应优先回退到文件名中的真实标题。
+        """
+        normalized = (title or "").strip()
+        if not normalized:
+            return True
+        return any(pattern.match(normalized) for pattern in MarkDownUtils._GENERIC_TITLE_PATTERNS)
 
     @staticmethod
     def clean_markdown_images(text: str) -> str:

@@ -16,6 +16,7 @@ from schemas.schema import (
     KnowledgeDocumentResponse,
     QueryRequest,
     QueryResponse,
+    RetrieveResponse,
     UploadResponse,
 )
 from services.indexing_service import IndexingService
@@ -179,3 +180,19 @@ async def query(request: QueryRequest):
     except Exception as exc:
         logger.exception("知识库查询失败")
         raise HTTPException(status_code=500, detail=f"知识库查询失败: {exc}") from exc
+
+
+@router.post("/retrieve", response_model=RetrieveResponse, summary="仅执行知识库检索")
+async def retrieve_only(request: QueryRequest):
+    """只执行检索并返回来源，不依赖聊天模型。"""
+    user_question = request.question.strip()
+    if not user_question:
+        raise HTTPException(status_code=400, detail="查询问题不能为空")
+
+    try:
+        retrieval_context = retrieval_service.retrieval(user_question)
+        sources = query_service.build_sources(retrieval_context)
+        return RetrieveResponse(question=user_question, sources=sources)
+    except Exception as exc:
+        logger.exception("知识库检索失败")
+        raise HTTPException(status_code=500, detail=f"知识库检索失败: {exc}") from exc
