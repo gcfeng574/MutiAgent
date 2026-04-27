@@ -1,0 +1,13 @@
+
+> its_knowlege_platform@0.0.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m2237[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m3000[22m/[39m
+[2m19:39:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Knowledge.vue, /src/views/Chat.vue[22m
+[2m19:39:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Knowledge.vue, /src/views/Knowledge.vue?vue&type=style&index=0&scoped=42eb3d46&lang.scss[22m
+[2m19:40:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Knowledge.vue, /src/views/Knowledge.vue?vue&type=style&index=0&scoped=42eb3d46&lang.scss[22m
+[2m19:40:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Chat.vue, /src/views/Chat.vue?vue&type=style&index=0&scoped=ef077a5e&lang.scss[22m
+[2m19:41:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Chat.vue, /src/views/Chat.vue?vue&type=style&index=0&scoped=ef077a5e&lang.scss[22m

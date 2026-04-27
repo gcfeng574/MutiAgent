@@ -8,5 +8,7 @@ httpx
 mcp
 langchain-core
 langchain-openai
+langchain-chroma
 langgraph
 pystun3
+redis

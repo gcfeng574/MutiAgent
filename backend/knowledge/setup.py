@@ -9,6 +9,7 @@ setup(
         "uvicorn",
         "requests",
         "python-dotenv",
+        "aiofiles",
         "langchain-core",
         "langchain-community",
         "langchain-openai",
@@ -19,6 +20,7 @@ setup(
         "jieba",
         "unstructured",
         "markdown",
-        "python-multipart"
+        "python-multipart",
+        "transformers",
     ],
 )

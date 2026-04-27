@@ -15,3 +15,8 @@
 2026-04-26 12:40:00,471 | WARNING  | ITS_App:93 | 用户目录不存在: 1
 2026-04-26 12:40:00,473 | INFO     | ITS_App:42 | Fetching sessions for user 1
 2026-04-26 12:40:00,475 | WARNING  | ITS_App:93 | 用户目录不存在: 1
+2026-04-26 15:21:15,222 | WARNING  | ITS_App:22 | Redis cache disabled: python redis package is not installed
+2026-04-26 15:21:15,816 | WARNING  | ITS_App:79 | Vector memory search failed: HTTPSConnectionPool(host='openaipublic.blob.core.windows.net', port=443): Max retries exceeded with url: /encodings/cl100k_base.tiktoken (Caused by NewConnectionError("HTTPSConnection(host='openaipublic.blob.core.windows.net', port=443): Failed to establish a new connection: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。"))
+2026-04-26 15:28:17,288 | WARNING  | ITS_App:22 | Redis cache disabled: Error 13 connecting to 192.168.149.153:6379. 以一种访问权限不允许的方式做了一个访问套接字的尝试。.
+2026-04-26 20:20:44,035 | INFO     | ITS_App:42 | Fetching sessions for user 1
+2026-04-26 20:20:44,047 | WARNING  | ITS_App:93 | 用户目录不存在: 1

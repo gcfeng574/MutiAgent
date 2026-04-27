@@ -1,76 +1,110 @@
-import  os
+import os
 import re
-from typing import List,Dict,Any
+from typing import Any, Dict, List
 
 
 class MarkDownUtils:
-    """
-     MarkDown文档处理工具
-    """
+    """Markdown 文档相关工具。"""
 
     @staticmethod
     def collect_md_metadata(folder_path: str) -> List[Dict[str, Any]]:
-        """
-        收集Markdown文件元数据
-
-        遍历指定目录，提取所有Markdown文件的路径和标题信息。
-
-        Args:
-            folder_path: Markdown文件所在目录
-
-        Returns:
-            List[Dict[str, Any]]: 包含路径和标题的元数据列表
-        """
-        md_metadata = []
+        """扫描目录并收集 Markdown 文件的路径与标题。"""
+        md_metadata: List[Dict[str, Any]] = []
         if not os.path.exists(folder_path):
             return md_metadata
 
-        # 正则匹配文件名格式：编号-标题.md
-        filename_pattern = re.compile(r'^(.+?)-(.*?)\.md$')
-
+        filename_pattern = re.compile(r"^(.+?)-(.*?)\.md$")
         for filename in os.listdir(folder_path):
-            if filename.endswith('.md'):
-                match = filename_pattern.match(filename)
-                if match:
-                    title = match.group(2).strip()
-                else:
-                    title = os.path.splitext(filename)[0].strip()
-
-                md_metadata.append({
+            if not filename.endswith(".md"):
+                continue
+            match = filename_pattern.match(filename)
+            title = match.group(2).strip() if match else os.path.splitext(filename)[0].strip()
+            md_metadata.append(
+                {
                     "path": os.path.join(folder_path, filename),
-                    "title": title
-                })
+                    "title": title,
+                }
+            )
         return md_metadata
 
     @staticmethod
     def extract_title(file_path: str) -> str:
-        """
-        辅助方法：从文件名中提取标题
-        逻辑与 MarkDownUtils 保持一致
-        """
+        """优先从 `编号-标题.md` 文件名中提取标题，否则回退到去后缀文件名。"""
         filename = os.path.basename(file_path)
-        filename_pattern = re.compile(r'^(.+?)-(.*?)\.md$')
+        filename_pattern = re.compile(r"^(.+?)-(.*?)\.md$")
         match = filename_pattern.match(filename)
         if match:
-            # 提取正则分组的第2部分作为标题
             return match.group(2).strip()
-        else:
-            # 匹配失败则使用文件名（去后缀）
-            return os.path.splitext(filename)[0].strip()
+        return os.path.splitext(filename)[0].strip()
 
+    @staticmethod
     def clean_markdown_images(text: str) -> str:
-        """将 ![描述](url) 替换为纯 url，每张图单独一行"""
-        # 匹配 Markdown 图片语法: ![任意文字](任意URL)
-        pattern = r'!\$$[^$$]*\]\((https?://[^\s\)]+)\)'
+        """把 Markdown 图片语法替换成独立 URL，避免图片描述污染索引。"""
+        pattern = r"!\[[^\]]*\]\((https?://[^\s\)]+)\)"
 
-        def replace_func(match):
-            url = match.group(1)
-            return f"\n{url}\n"  # 每个链接前后加换行，保证独立一行
+        def replace_func(match: re.Match[str]) -> str:
+            return f"\n{match.group(1)}\n"
 
         cleaned = re.sub(pattern, replace_func, text)
-
-        # 清理多余空行
-        cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
-
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
         return cleaned.strip()
 
+    @staticmethod
+    def normalize_markdown(text: str) -> str:
+        """对 Markdown 文本做轻量清洗，减少索引时的格式噪声。"""
+        if not text:
+            return ""
+
+        cleaned = MarkDownUtils.clean_markdown_images(text)
+        cleaned = cleaned.replace("\r\n", "\n").replace("\r", "\n")
+        cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+        return cleaned.strip()
+
+    @staticmethod
+    def split_markdown_sections(text: str) -> List[Dict[str, Any]]:
+        """
+        按 Markdown 标题切分 section，并保留标题层级路径。
+
+        Returns:
+            List[Dict[str, Any]]: 每个 section 包含标题、层级、路径和正文。
+        """
+        if not text:
+            return []
+
+        heading_pattern = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+        sections: List[Dict[str, Any]] = []
+        heading_stack: List[str] = []
+        current_heading = ""
+        current_level = 0
+        current_lines: List[str] = []
+
+        def flush_section() -> None:
+            content = "\n".join(current_lines).strip()
+            if not content and not current_heading:
+                return
+            sections.append(
+                {
+                    "heading": current_heading,
+                    "heading_level": current_level,
+                    "heading_path": " > ".join(item for item in heading_stack if item),
+                    "content": content,
+                }
+            )
+
+        for line in text.split("\n"):
+            match = heading_pattern.match(line.strip())
+            if match:
+                flush_section()
+                hashes, heading = match.groups()
+                current_level = len(hashes)
+                heading = heading.strip()
+                heading_stack = heading_stack[: current_level - 1]
+                heading_stack.append(heading)
+                current_heading = heading
+                current_lines = []
+            else:
+                current_lines.append(line)
+
+        flush_section()
+        return sections

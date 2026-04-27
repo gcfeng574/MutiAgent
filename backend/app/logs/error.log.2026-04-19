@@ -1,0 +1,7 @@
+2026-01-21 11:35:41,377 | ERROR    | ITS_App:23 | MCP连接建立失败: name 'mcp_connect' is not defined
+2026-01-21 11:36:18,572 | ERROR    | ITS_App:33 | MCP连接清理失败: name 'mcp_cleanup' is not defined
+2026-04-19 17:44:13,763 | ERROR    | ITS_App:12 | 百度地图MCP连接失败: Failed to connect to MCP server '百度地图': Could not reach the server.
+2026-04-19 17:44:13,911 | ERROR    | ITS_App:16 | 搜索MCP连接失败: Failed to connect to MCP server '通用联网搜索': Could not reach the server.
+2026-04-19 17:45:53,676 | ERROR    | ITS_App:16 | 搜索MCP连接失败: Failed to connect to MCP server '通用联网搜索': HTTP error 401 (Unauthorized)
+2026-04-19 17:55:13,098 | ERROR    | ITS_App:63 | AgentService.process_query执行出错: Error code: 401 - {'error': {'message': 'Incorrect API key provided. For details, see: https://help.aliyun.com/zh/model-studio/error-code#apikey-error', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}, 'request_id': '1d1ef0cd-ed31-9162-9f27-380029083bc4'}
+2026-04-19 17:55:13,191 | ERROR    | ITS_App:63 | AgentService.process_query执行出错: Error code: 401 - {'error': {'message': 'Incorrect API key provided. For details, see: https://help.aliyun.com/zh/model-studio/error-code#apikey-error', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}, 'request_id': '0580fb5f-5e81-99af-a641-5705a1f6a15f'}

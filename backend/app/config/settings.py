@@ -45,6 +45,23 @@ class Settings(BaseSettings):
     MYSQL_CONNECT_TIMEOUT: int = Field(default=10, description="MySQL connect timeout seconds")
     MYSQL_MAX_CONNECTIONS: int = Field(default=5, description="MySQL max connections")
 
+    REDIS_HOST: str = Field(default="127.0.0.1", description="Redis host")
+    REDIS_PORT: int = Field(default=6379, description="Redis port")
+    REDIS_PASSWORD: Optional[str] = Field(default=None, description="Redis password")
+    REDIS_DB: int = Field(default=0, description="Redis database index")
+    REDIS_SOCKET_TIMEOUT: int = Field(default=2, description="Redis socket timeout seconds")
+
+    MEMORY_RECENT_WINDOW_TURNS: int = Field(default=10, description="Recent raw window size in turns")
+    MEMORY_MID_WINDOW_TURNS: int = Field(default=40, description="Middle summary window size in turns")
+    MEMORY_RETRIEVAL_TOP_K: int = Field(default=5, description="Top K long-term memories to retrieve")
+    MEMORY_CACHE_TTL_SECONDS: int = Field(default=86400, description="Redis TTL for cached memory fragments")
+    MEMORY_VECTOR_COLLECTION: str = Field(default="its-long-term-memory", description="Vector collection name")
+    MEMORY_EMBEDDING_MODEL: str = Field(default="BAAI/bge-m3", description="Embedding model name")
+    MEMORY_VECTOR_STORE_PATH: str = Field(
+        default=str(Path(__file__).parent.parent / "memory_vector_store"),
+        description="Persistent storage path for long-term memory vectors",
+    )
+
     KNOWLEDGE_BASE_URL: Optional[str] = Field(default=None, description="Knowledge base URL")
     DASHSCOPE_BASE_URL: Optional[str] = Field(default=None, description="DashScope MCP URL")
     DASHSCOPE_API_KEY: Optional[str] = Field(default=None, description="DashScope API key")

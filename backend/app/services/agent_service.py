@@ -47,8 +47,12 @@ class MultiAgentService:
 
             yield "data: " + ResponseFactory.build_finish().model_dump_json() + "\n\n"
 
-            chat_history.append({"role": "assistant", "content": format_agent_result})
-            session_service.save_history(user_id, session_id, chat_history)
+            await session_service.append_exchange(
+                user_id=user_id,
+                session_id=session_id,
+                user_input=user_query,
+                assistant_output=format_agent_result,
+            )
         except Exception as exc:
             logger.error("AgentService.process_query failed: %s", exc)
             logger.debug("AgentService.process_query traceback: %s", traceback.format_exc())

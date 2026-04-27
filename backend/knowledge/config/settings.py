@@ -16,15 +16,20 @@ class Settings(BaseSettings):
     _project_root = os.path.dirname(_current_dir)
     
     VECTOR_STORE_PATH: str = os.path.join(_project_root, "chroma_kb1")
+    VECTOR_COLLECTION_NAME: str = "its-knowledge-v2"
     
     # Default directories
     CRAWL_OUTPUT_DIR: str = os.path.join(_project_root, "data", "crawl")
     # Using 'data/crawl' as the default location for markdown files
     MD_FOLDER_PATH: str = CRAWL_OUTPUT_DIR
     TMP_MD_FOLDER_PATH:str= os.path.join(_project_root, "data", "tmp")
+    DOCUMENT_UPLOAD_DIR: str = os.path.join(_project_root, "data", "uploads")
+    METADATA_DB_PATH: str = os.path.join(_project_root, "data", "knowledge_meta.db")
     # Text splitting configuration
     CHUNK_SIZE: int = 3000
     CHUNK_OVERLAP: int = 200
+    MIN_SECTION_CHARS: int = 180
+    INDEXING_BATCH_SIZE: int = 16
 
     # Retrieval configuration
     TOP_ROUGH: int = 50

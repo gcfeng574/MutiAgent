@@ -1,0 +1,69 @@
+INFO:     Started server process [23148]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+Error in sse_reader
+Traceback (most recent call last):
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\mcp\client\sse.py", line 81, in sse_reader
+    async for sse in event_source.aiter_sse():  # pragma: no branch
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<42 lines>...
+                logger.warning(f"Unknown SSE event: {sse.event}")  # pragma: no cover
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx_sse\_api.py", line 42, in aiter_sse
+    async for line in lines:
+    ...<3 lines>...
+            yield sse
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx_sse\_api.py", line 80, in _aiter_sse_lines
+    async for text in response.aiter_text():
+        for line in decoder.decode(text):
+            yield line
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx\_models.py", line 1018, in aiter_text
+    async for byte_content in self.aiter_bytes():
+    ...<2 lines>...
+            yield chunk
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx\_models.py", line 997, in aiter_bytes
+    async for raw_bytes in self.aiter_raw():
+    ...<2 lines>...
+            yield chunk
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx\_models.py", line 1055, in aiter_raw
+    async for raw_stream_bytes in self.stream:
+    ...<2 lines>...
+            yield chunk
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx\_client.py", line 176, in __aiter__
+    async for chunk in self._stream:
+        yield chunk
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpx\_transports\default.py", line 271, in __aiter__
+    async for part in self._httpcore_stream:
+        yield part
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_async\connection_pool.py", line 407, in __aiter__
+    raise exc from None
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_async\connection_pool.py", line 403, in __aiter__
+    async for part in self._stream:
+        yield part
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_async\http11.py", line 342, in __aiter__
+    raise exc
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_async\http11.py", line 334, in __aiter__
+    async for chunk in self._connection._receive_response_body(**kwargs):
+        yield chunk
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_async\http11.py", line 203, in _receive_response_body
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_async\http11.py", line 217, in _receive_event
+    data = await self._network_stream.read(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.READ_NUM_BYTES, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\httpcore\_backends\anyio.py", line 35, in read
+    return await self._stream.receive(max_bytes=max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\anyio\streams\tls.py", line 239, in receive
+    data = await self._call_sslobject_method(self._ssl_object.read, max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BaiduNetdiskDownload\its_multi_agent\myenv\Lib\site-packages\anyio\streams\tls.py", line 175, in _call_sslobject_method
+    result = func(*args)
+  File "C:\ProgramData\anaconda3\Lib\ssl.py", line 868, in read
+    v = self._sslobj.read(len)
+ssl.SSLError: [SSL: DECRYPTION_FAILED_OR_BAD_RECORD_MAC] decryption failed or bad record mac (_ssl.c:2648)

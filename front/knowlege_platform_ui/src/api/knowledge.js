@@ -16,3 +16,17 @@ export function queryKnowledge(data) {
     data
   })
 }
+
+export function getIndexJob(jobId) {
+  return request({
+    url: `/index-jobs/${jobId}`,
+    method: 'get'
+  })
+}
+
+export function getDocuments() {
+  return request({
+    url: '/documents',
+    method: 'get'
+  })
+}

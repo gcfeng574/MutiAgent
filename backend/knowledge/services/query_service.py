@@ -1,74 +1,95 @@
 from typing import List
-from langchain_core.documents import Document
+
 from langchain_openai import ChatOpenAI
+
 from config.settings import settings
+from schemas.schema import SourceItem
+from services.retrieval_service import RetrievalItem
+
 
 class QueryService:
-    """检索服务"""
+    """负责把检索结果组织成提示词，并生成最终答案。"""
 
     def __init__(self):
+        self.llm = ChatOpenAI(
+            model_name=settings.MODEL,
+            openai_api_key=settings.API_KEY,
+            openai_api_base=settings.BASE_URL,
+            temperature=0,
+        )
 
-        self.llm=ChatOpenAI(model_name=settings.MODEL,
-                            openai_api_key=settings.API_KEY,
-                            openai_api_base=settings.BASE_URL,
-                            temperature=0) # temperature作用：控制模型输出的随机度 尽量不要让它乱发挥（尽最大努力保证：影响因素：硬件（并行gpu：精度变乱）网络（moe专家））
-
-
-
-    def generate_answer(self, user_question:str, retrival_context: List[Document]) -> str:
+    def generate_answer(self, user_question: str, retrieval_context: List[RetrievalItem]) -> str:
         """
-        对接大语言模型的入口
+        基于检索上下文生成回答。
+
+        这里喂给模型的是父块内容，而不是命中的子块内容。
+        这样做的原因是：子块更适合召回，父块更适合回答。
+
         Args:
-            user_question: 用户问题
-            retrival_context: 检索到的上下文
+            user_question: 用户问题。
+            retrieval_context: `RetrievalService` 返回的结构化检索结果。
 
         Returns:
-            str:LLM模型整合上下文之后的自然语言
+            str: 大模型最终生成的回答文本。
         """
+        if not retrieval_context:
+            return "当前知识库中暂时没有找到该问题的相关资料。"
 
-        # 1. 判断是否检索到了文档
-        if not  retrival_context:
-            return "未检索到任何相关的文档，无法提供回复"
+        serialized_context = "\n\n".join(
+            [
+                (
+                    f"资料{index + 1}（标题：{item.title}，文件：{item.file_name}，"
+                    f"召回方式：{item.recall_type}，分数：{item.score:.4f}）\n"
+                    f"{item.content}"
+                )
+                for index, item in enumerate(retrieval_context)
+            ]
+        )
 
-
-        # 2. 处理检索到的知识内容
-        retrival_context="\n\n".join([f"资料{index+1}:{document}"for index,document in enumerate(retrival_context)])
-
-        # 3. 定义提示词
         prompt = f"""
-        你是一位经验丰富的高级技术支持专家。请基于下方的【参考资料】回答【用户问题】。
+你是一位严谨的知识库问答助手。请严格基于【参考资料】回答【用户问题】。
 
-         【参考资料】：
-         ```
-         {retrival_context}
-         ```
+【参考资料】
+{serialized_context}
 
-         【用户问题】：
-         ```
-         {user_question}
-         ```
+【用户问题】
+{user_question}
 
-         【回答要求】：
-         1.  **基于事实**：严格基于【参考资料】的内容回答，严禁编造资料中未提及的信息。如果资料无法回答问题，请直接回答：“当前的知识库中暂时没有找到该问题的解决方案。”
-         2.  **去特定化处理**：(重要)
-             - 除非用户问题中明确指明了特定型号/品牌，否则在回答中请**移除**具体的设备型号、品牌名称（如“联想”、“K900”等）。
-             - 例如：将“联想手机设置”泛化为“手机设置”；将“打开联想电脑管家”泛化为“打开系统管理软件”或“相关设置工具”。
-         3.  **结构清晰**：
-             - 如果是操作步骤，请使用有序列表（1. 2. 3.）。
-             - 语言风格应简洁、专业、直接，避免寒暄和废话。
-         4. 引用来源：在回答的最后，请列出你参考的【资料x】的编号(仅列出编号即可) 
+【回答要求】
+1. 只能依据参考资料作答，不要补充资料中没有的信息。
+2. 如果资料不足以回答，请明确说明“当前知识库中暂时没有找到该问题的解决方案”。
+3. 如果是步骤类问题，请使用有序列表。
+4. 语言简洁、专业、直接。
+5. 回答结尾附上“参考资料：资料1、资料2...”这样的来源编号。
+"""
 
-         【开始回答】：
-         """
+        llm_response = self.llm.invoke(prompt)
+        return llm_response.content
 
-        # 4. 调用模型
-        llm_response=self.llm.invoke(prompt)
+    @staticmethod
+    def build_sources(retrieval_context: List[RetrievalItem]) -> List[SourceItem]:
+        """
+        把内部检索结果转换成 API 返回的 `sources` 列表。
 
+        这里来源展示优先用 `child_content`，因为前端更需要看到
+        “具体命中了哪一小段”，而不是整段父块全文。
 
-        # 5. 返回模型的结果
-        return  llm_response.content
+        Args:
+            retrieval_context: `RetrievalService` 返回的结构化检索结果。
 
-
-
-
-
+        Returns:
+            List[SourceItem]: 面向前端展示的来源片段列表。
+        """
+        return [
+            SourceItem(
+                document_id=item.document_id,
+                file_name=item.file_name,
+                title=item.title,
+                chunk_id=item.chunk_id,
+                chunk_index=item.chunk_index,
+                snippet=item.child_content[:300] if item.child_content else item.content[:300],
+                score=item.score,
+                recall_type=item.recall_type,
+            )
+            for item in retrieval_context
+        ]

@@ -1,0 +1,39 @@
+[32;20m12:36:18 | INFO     | Application starting with MCP disabled[0m
+INFO:     127.0.0.1:49668 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49668 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64990 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64990 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64990 - "OPTIONS /api/user_sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57730 - "OPTIONS /api/user_sessions HTTP/1.1" 200 OK
+[32;20m12:38:00 | INFO     | Fetching sessions for user 1[0m
+[33;20m12:38:00 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+INFO:     127.0.0.1:64990 - "POST /api/user_sessions HTTP/1.1" 200 OK
+[32;20m12:38:00 | INFO     | Fetching sessions for user 1[0m
+[33;20m12:38:00 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+INFO:     127.0.0.1:53404 - "POST /api/user_sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60464 - "OPTIONS /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60464 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58491 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58491 - "POST /api/auth/login HTTP/1.1" 200 OK
+[32;20m12:38:22 | INFO     | Fetching sessions for user 1[0m
+[32;20m12:38:22 | INFO     | Fetching sessions for user 1[0m
+[33;20m12:38:22 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+[33;20m12:38:22 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+INFO:     127.0.0.1:58491 - "POST /api/user_sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52069 - "POST /api/user_sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52069 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52844 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64637 - "POST /api/auth/login HTTP/1.1" 200 OK
+[32;20m12:40:00 | INFO     | Fetching sessions for user 1[0m
+[33;20m12:40:00 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+INFO:     127.0.0.1:64637 - "POST /api/user_sessions HTTP/1.1" 200 OK
+[32;20m12:40:00 | INFO     | Fetching sessions for user 1[0m
+[33;20m12:40:00 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+INFO:     127.0.0.1:52568 - "POST /api/user_sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56859 - "OPTIONS /api/user_sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56859 - "POST /api/user_sessions HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56859 - "OPTIONS /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52978 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+[32;20m20:20:44 | INFO     | Fetching sessions for user 1[0m
+[33;20m20:20:44 | WARNING  | ÓÃ»§Ä¿Â¼²»´æÔÚ: 1[0m
+INFO:     127.0.0.1:52978 - "POST /api/user_sessions HTTP/1.1" 200 OK

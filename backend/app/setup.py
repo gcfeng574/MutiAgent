@@ -14,9 +14,11 @@ setup(
         "mcp",
         "langchain-core",
         "langchain-openai",
+        "langchain-chroma",
         "langgraph",
         "pymysql",
         "dbutils",
         "pystun3",
+        "redis",
     ],
 )

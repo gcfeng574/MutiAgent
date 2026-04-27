@@ -1,134 +1,301 @@
-import json
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
-from infrastructure.logging.logger import logger
+from pymysql.cursors import DictCursor
+
+from infrastructure.database.database_pool import pool
 
 
 class SessionRepository:
-    """会话数据仓储类。
+    """会话与消息的 MySQL 仓储。
 
-    负责处理底层的会话文件存储、读取和文件系统操作。
-    使用 pathlib 进行现代化的路径管理。
+    作用：
+    1. 管理 chat_sessions 表。
+    2. 管理 chat_messages 表。
+    3. 提供按会话、按轮次读取消息的基础能力。
     """
 
-    # 存储目录名称常量
-    STORAGE_DIR_NAME = "user_memories"
+    DEFAULT_SESSION_ID = "default_session"
 
-    def __init__(self):
-        """初始化 SessionRepository。
-
-        自动定位并创建存储根目录。
-        """
-
-        current_file = Path(__file__).resolve()
-
-        self._base_dir = current_file.parent.parent
-
-        # 拼接存储路径: backend/app/user_memories
-        self._storage_root = self._base_dir / self.STORAGE_DIR_NAME
-
-        # 确保存储根目录存在
-        self._storage_root.mkdir(parents=True, exist_ok=True)
-
-
-    def load_session(
-            self, user_id: str, session_id: str
-    ) -> Optional[List[Dict[str, Any]]]:
-        """从文件加载会话数据。
+    def get_or_create_session(self, user_id: int, session_key: str | None) -> dict[str, Any]:
+        """获取或创建会话。
 
         Args:
-            user_id: 用户ID。
-            session_id: 会话ID。
+            user_id: 当前登录用户的数据库主键 id。
+            session_key: 前端传入的会话唯一标识；为空时自动使用默认会话 id。
 
         Returns:
-            List[Dict]: 解析后的会话数据。
-            None: 如果文件不存在。
-
-        Raises:
-            json.JSONDecodeError: 如果文件内容损坏。
+            dict[str, Any]:
+                chat_sessions 表中的一行会话数据。
         """
-        file_path = self._get_file_path(user_id, session_id)
+        # session_key 为空时统一落到默认会话，避免前端第一次进来没有 session_id 无法建会话。
+        normalized_key = session_key or self.DEFAULT_SESSION_ID
+        existing = self.get_session_by_key(user_id, normalized_key)
+        if existing:
+            return existing
 
-        if not file_path.exists():
-            return None
-
-        with file_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-
-    def save_session(
-            self, user_id: str, session_id: str, data: List[Dict[str, Any]]
-    ) -> None:
-        """保存会话数据到文件。
-
-        Args:
-            user_id: 用户ID。
-            session_id: 会话ID。
-            data: 要保存的数据列表。
-        """
-        file_path = self._get_file_path(user_id, session_id)
-
-        # 确保用户的个人目录存在 (懒加载模式)
-        if not file_path.parent.exists():
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with file_path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-    def get_all_sessions_metadata(
-            self, user_id: str
-    ) -> List[Tuple[str, str, Union[List, Exception]]]:
-        """获取用户所有会话的元数据和内容。
-
-        Args:
-            user_id: 用户ID。
-
-        Returns:
-            List[Tuple]: 包含 (session_id, create_time, data_or_error) 的列表。
-        """
-        user_dir = self._get_user_directory(user_id)
-
-        if not user_dir.exists():
-            logger.warning(f"用户目录不存在: {user_id}")
-            return []
-
-        results = []
-
+        connection = pool.connection()
+        cursor = connection.cursor(DictCursor)
         try:
-            # 遍历目录下所有 .json 文件
-            for file_path in user_dir.glob("*.json"):
-                session_id = file_path.stem  # 获取文件名不带后缀部分
+            cursor.execute(
+                """
+                INSERT INTO chat_sessions (user_id, session_key, status)
+                VALUES (%s, %s, 'active')
+                """,
+                (user_id, normalized_key),
+            )
+            connection.commit()
+            return self.get_session_by_key(user_id, normalized_key)
+        finally:
+            cursor.close()
+            connection.close()
 
-                # 获取文件创建时间
-                stat = file_path.stat()
-                create_time = datetime.fromtimestamp(stat.st_ctime).strftime(
-                    "%Y-%m-%d %H:%M:%S"
+    def get_session_by_key(self, user_id: int, session_key: str) -> dict[str, Any] | None:
+        """按 user_id + session_key 查询会话。
+
+        Args:
+            user_id: 当前用户 id。
+            session_key: 会话唯一标识。
+
+        Returns:
+            dict[str, Any] | None:
+                查询到则返回会话行数据，否则返回 None。
+        """
+        connection = pool.connection()
+        cursor = connection.cursor(DictCursor)
+        try:
+            cursor.execute(
+                """
+                SELECT *
+                FROM chat_sessions
+                WHERE user_id=%s AND session_key=%s
+                LIMIT 1
+                """,
+                (user_id, session_key),
+            )
+            return cursor.fetchone()
+        finally:
+            cursor.close()
+            connection.close()
+
+    def get_last_turn_index(self, session_id: int) -> int:
+        """获取当前会话最后一轮的 turn_index。
+
+        Args:
+            session_id: chat_sessions.id。
+
+        Returns:
+            int:
+                当前会话最后一轮编号；若还没有消息则返回 0。
+        """
+        connection = pool.connection()
+        cursor = connection.cursor(DictCursor)
+        try:
+            cursor.execute(
+                "SELECT COALESCE(MAX(turn_index), 0) AS last_turn_index FROM chat_messages WHERE session_id=%s",
+                (session_id,),
+            )
+            row = cursor.fetchone()
+            return int(row["last_turn_index"] or 0)
+        finally:
+            cursor.close()
+            connection.close()
+
+    def append_message(
+        self,
+        session_id: int,
+        user_id: int,
+        turn_index: int,
+        sequence_no: int,
+        role: str,
+        content: str,
+        token_count: int | None = None,
+    ) -> int:
+        """向 chat_messages 表追加一条消息。
+
+        Args:
+            session_id: chat_sessions.id。
+            user_id: 当前用户 id。
+            turn_index: 该消息所属轮次。
+            sequence_no: 该轮中的顺序号。
+            role: 消息角色，如 user / assistant / system。
+            content: 消息文本内容。
+            token_count: 可选，消息的 token 数。
+
+        Returns:
+            int:
+                新插入消息的主键 id。
+        """
+        connection = pool.connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO chat_messages (
+                    session_id, user_id, turn_index, sequence_no, role, content, token_count
                 )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (session_id, user_id, turn_index, sequence_no, role, content, token_count),
+            )
+            connection.commit()
+            return cursor.lastrowid
+        finally:
+            cursor.close()
+            connection.close()
 
-                try:
-                    with file_path.open("r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    results.append((session_id, create_time, data))
-                except Exception as e:
-                    # 读取或解析失败，返回异常对象
-                    logger.error(f"读取会话文件 {file_path.name} 失败: {e}")
-                    results.append((session_id, create_time, e))
+    def update_session_after_append(
+        self,
+        session_id: int,
+        last_turn_index: int,
+        last_message_at: datetime,
+        title: str | None = None,
+    ) -> None:
+        """在追加消息后更新会话元信息。
 
-        except Exception as e:
-            logger.error(f"遍历用户 {user_id} 会话目录失败: {e}")
+        Args:
+            session_id: chat_sessions.id。
+            last_turn_index: 当前会话最新轮次。
+            last_message_at: 最后一条消息的时间。
+            title: 可选，会话标题；通常只在第一轮生成时写入。
+
+        Returns:
+            None
+        """
+        connection = pool.connection()
+        cursor = connection.cursor()
+        try:
+            if title:
+                cursor.execute(
+                    """
+                    UPDATE chat_sessions
+                    SET last_turn_index=%s, last_message_at=%s, title=COALESCE(title, %s)
+                    WHERE id=%s
+                    """,
+                    (last_turn_index, last_message_at, title, session_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE chat_sessions
+                    SET last_turn_index=%s, last_message_at=%s
+                    WHERE id=%s
+                    """,
+                    (last_turn_index, last_message_at, session_id),
+                )
+            connection.commit()
+        finally:
+            cursor.close()
+            connection.close()
+
+    def list_messages(self, session_id: int) -> list[dict[str, Any]]:
+        """读取某个会话的全部消息。
+
+        Args:
+            session_id: chat_sessions.id。
+
+        Returns:
+            list[dict[str, Any]]:
+                按 turn_index、sequence_no 排序后的完整消息列表。
+        """
+        connection = pool.connection()
+        cursor = connection.cursor(DictCursor)
+        try:
+            cursor.execute(
+                """
+                SELECT id, role, content, turn_index, sequence_no, created_at
+                FROM chat_messages
+                WHERE session_id=%s AND deleted_at IS NULL
+                ORDER BY turn_index ASC, sequence_no ASC, id ASC
+                """,
+                (session_id,),
+            )
+            return list(cursor.fetchall())
+        finally:
+            cursor.close()
+            connection.close()
+
+    def list_messages_by_turn_range(
+        self,
+        session_id: int,
+        turn_start: int,
+        turn_end: int,
+    ) -> list[dict[str, Any]]:
+        """按轮次区间读取消息。
+
+        Args:
+            session_id: chat_sessions.id。
+            turn_start: 起始轮次，包含。
+            turn_end: 结束轮次，包含。
+
+        Returns:
+            list[dict[str, Any]]:
+                指定 turn 区间内的消息列表；若区间非法则返回空列表。
+        """
+        if turn_end < turn_start:
             return []
+        connection = pool.connection()
+        cursor = connection.cursor(DictCursor)
+        try:
+            cursor.execute(
+                """
+                SELECT id, role, content, turn_index, sequence_no, created_at
+                FROM chat_messages
+                WHERE session_id=%s AND deleted_at IS NULL
+                  AND turn_index BETWEEN %s AND %s
+                ORDER BY turn_index ASC, sequence_no ASC, id ASC
+                """,
+                (session_id, turn_start, turn_end),
+            )
+            return list(cursor.fetchall())
+        finally:
+            cursor.close()
+            connection.close()
 
-        return results
+    def list_recent_turns(self, session_id: int, limit_turns: int) -> list[dict[str, Any]]:
+        """读取会话最近 N 轮消息。
 
-    def _get_user_directory(self, user_id: str) -> Path:
-        """获取用户的记忆文件夹路径对象。"""
-        return self._storage_root / user_id
+        Args:
+            session_id: chat_sessions.id。
+            limit_turns: 最近保留的轮次数。
 
-    def _get_file_path(self, user_id: str, session_id: str) -> Path:
-        """获取具体会话文件的路径对象。"""
-        return self._get_user_directory(user_id) / f"{session_id}.json"
+        Returns:
+            list[dict[str, Any]]:
+                最近 N 轮消息，按时间正序排列。
+        """
+        # “最近窗口”按 turn 取，不按消息条数取，避免一轮里多条消息把窗口挤爆。
+        last_turn = self.get_last_turn_index(session_id)
+        if last_turn == 0:
+            return []
+        start_turn = max(1, last_turn - limit_turns + 1)
+        return self.list_messages_by_turn_range(session_id, start_turn, last_turn)
+
+    def list_user_sessions(self, user_id: int) -> list[dict[str, Any]]:
+        """读取某个用户的所有会话列表。
+
+        Args:
+            user_id: 用户 id。
+
+        Returns:
+            list[dict[str, Any]]:
+                按最后活跃时间倒序排列的会话列表。
+        """
+        connection = pool.connection()
+        cursor = connection.cursor(DictCursor)
+        try:
+            cursor.execute(
+                """
+                SELECT *
+                FROM chat_sessions
+                WHERE user_id=%s
+                ORDER BY COALESCE(last_message_at, created_at) DESC, id DESC
+                """,
+                (user_id,),
+            )
+            return list(cursor.fetchall())
+        finally:
+            cursor.close()
+            connection.close()
 
 
-# 全局单例
 session_repository = SessionRepository()
